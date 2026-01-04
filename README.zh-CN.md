@@ -60,7 +60,7 @@
 
 ## 使用方式
 
-- 点击状态栏图标切换显示模式
+- **点击状态栏图标**：未授权时触发 GitHub 自动授权；已授权后切换显示模式
 - 悬停状态栏查看 tooltip
 - `Copilot Usage: Show Details` 打开详情面板
 - `Copilot Usage: Show Logs` 打开日志输出（排查问题用）

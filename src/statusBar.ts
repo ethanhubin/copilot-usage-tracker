@@ -140,11 +140,10 @@ export class StatusBarManager implements vscode.Disposable {
         this.statusBarItem.text = '$(rocket) Copilot: No Token';
         this.statusBarItem.tooltip = new vscode.MarkdownString(
             '**No authentication configured**\n\n' +
-            'Click to set a Personal Access Token, or run\n' +
-            '`Copilot Usage: Authenticate with GitHub` command\n' +
-            'to try automatic detection.'
+            'Click to authenticate with GitHub automatically.\n\n' +
+            '_Or run `Copilot Usage: Set GitHub Token` to use a PAT manually._'
         );
-        this.statusBarItem.command = 'copilot-usage-tracker.setToken';
+        this.statusBarItem.command = 'copilot-usage-tracker.authenticate';
         this.statusBarItem.backgroundColor = undefined;
         this.statusBarItem.color = new vscode.ThemeColor('disabledForeground');
     }

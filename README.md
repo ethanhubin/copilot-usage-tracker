@@ -56,7 +56,7 @@ Notes:
 
 ## Usage
 
-- **Click status bar icon** to toggle display modes
+- **Click status bar icon**: If not authenticated, triggers GitHub authentication; otherwise toggles display modes
 - **Hover** to see detailed usage info
 - Run `Copilot Usage: Show Details` for the details panel
 - Run `Copilot Usage: Show Logs` for debugging
