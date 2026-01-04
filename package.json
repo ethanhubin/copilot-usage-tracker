@@ -1,8 +1,8 @@
 {
-  "name": "copilot-usage-tracker",
-  "displayName": "Copilot Usage Tracker",
+  "name": "copilot-usage-realtime",
+  "displayName": "Copilot Usage Realtime",
   "description": "Track and display GitHub Copilot premium request usage in real-time",
-  "version": "0.0.1",
+  "version": "0.0.6",
   "publisher": "ethanhubin",
   "repository": {
     "type": "git",
@@ -11,54 +11,27 @@
   "engines": {
     "vscode": "^1.85.0"
   },
-  "categories": [
-    "Other"
-  ],
-  "keywords": [
-    "copilot",
-    "github",
-    "usage",
-    "premium",
-    "tracker"
-  ],
-  "activationEvents": [
-    "onStartupFinished"
-  ],
+  "categories": ["Other"],
+  "keywords": ["copilot", "github", "usage", "premium", "tracker"],
+  "activationEvents": ["onStartupFinished"],
   "main": "./out/extension.js",
   "icon": "resources/icon.png",
   "contributes": {
     "commands": [
-      {
-        "command": "copilot-usage-tracker.refresh",
-        "title": "Copilot Usage: Refresh",
-        "icon": "$(refresh)"
-      },
-      {
-        "command": "copilot-usage-tracker.setToken",
-        "title": "Copilot Usage: Set GitHub Token"
-      },
-      {
-        "command": "copilot-usage-tracker.showDetails",
-        "title": "Copilot Usage: Show Details"
-      },
-      {
-        "command": "copilot-usage-tracker.clearToken",
-        "title": "Copilot Usage: Clear Token"
-      }
+      { "command": "copilot-usage-tracker.refresh", "title": "Copilot Usage: Refresh", "icon": "$(refresh)" },
+      { "command": "copilot-usage-tracker.setToken", "title": "Copilot Usage: Set GitHub Token" },
+      { "command": "copilot-usage-tracker.showDetails", "title": "Copilot Usage: Show Details" },
+      { "command": "copilot-usage-tracker.clearToken", "title": "Copilot Usage: Clear Token" },
+      { "command": "copilot-usage-tracker.authenticate", "title": "Copilot Usage: Authenticate with GitHub" },
+      { "command": "copilot-usage-tracker.showLogs", "title": "Copilot Usage: Show Logs" }
     ],
     "configuration": {
-      "title": "Copilot Usage Tracker",
+      "title": "Copilot Usage Realtime",
       "properties": {
         "copilotUsageTracker.plan": {
           "type": "string",
           "default": "pro",
-          "enum": [
-            "free",
-            "pro",
-            "pro_plus",
-            "business",
-            "enterprise"
-          ],
+          "enum": ["free", "pro", "pro_plus", "business", "enterprise"],
           "enumDescriptions": [
             "Copilot Free (50 requests/month)",
             "Copilot Pro (300 requests/month)",

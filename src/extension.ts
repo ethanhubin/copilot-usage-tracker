@@ -1,8 +1,9 @@
-import * as vscode from 'vscode';
+﻿import * as vscode from 'vscode';
 import { UsageService } from './usageService';
 import { StatusBarManager } from './statusBar';
 import { TokenManager } from './tokenManager';
 import { DetailsPanel } from './detailsPanel';
+import { getOutputChannel } from './copilotInternalApi';
 
 let usageService: UsageService;
 let statusBarManager: StatusBarManager;
@@ -10,17 +11,19 @@ let tokenManager: TokenManager;
 let refreshInterval: NodeJS.Timeout | undefined;
 
 export async function activate(context: vscode.ExtensionContext) {
-    console.log('Copilot Usage Tracker is now active!');
+    const outputChannel = getOutputChannel();
+    outputChannel.appendLine('Copilot Usage Realtime is now active!');
+    console.log('Copilot Usage Realtime is now active!');
 
     // Initialize managers
     tokenManager = new TokenManager(context);
     usageService = new UsageService(tokenManager);
-    statusBarManager = new StatusBarManager();
+    statusBarManager = new StatusBarManager(context);
 
     // Register commands
     const refreshCommand = vscode.commands.registerCommand(
         'copilot-usage-tracker.refresh',
-        () => refreshUsage()
+        () => refreshUsage(false)
     );
 
     const setTokenCommand = vscode.commands.registerCommand(
@@ -38,16 +41,30 @@ export async function activate(context: vscode.ExtensionContext) {
         () => clearToken()
     );
 
+    // New command: Authenticate with GitHub
+    const authenticateCommand = vscode.commands.registerCommand(
+        'copilot-usage-tracker.authenticate',
+        () => authenticateGitHub()
+    );
+
+    // New command: Show logs
+    const showLogsCommand = vscode.commands.registerCommand(
+        'copilot-usage-tracker.showLogs',
+        () => outputChannel.show()
+    );
+
     context.subscriptions.push(
         refreshCommand,
         setTokenCommand,
         showDetailsCommand,
         clearTokenCommand,
+        authenticateCommand,
+        showLogsCommand,
         statusBarManager
     );
 
-    // Initial refresh
-    await refreshUsage();
+    // Initial refresh (silent, no user prompt)
+    await refreshUsage(false);
 
     // Setup auto-refresh
     setupAutoRefresh();
@@ -56,30 +73,63 @@ export async function activate(context: vscode.ExtensionContext) {
     vscode.workspace.onDidChangeConfiguration(e => {
         if (e.affectsConfiguration('copilotUsageTracker')) {
             setupAutoRefresh();
-            refreshUsage();
+            refreshUsage(false);
         }
     });
 }
 
-async function refreshUsage() {
+async function refreshUsage(promptUser: boolean = false) {
     try {
-        const hasToken = await tokenManager.hasToken();
-        if (!hasToken) {
-            statusBarManager.showNoToken();
-            return;
-        }
-
         statusBarManager.showLoading();
-        const usage = await usageService.fetchUsage();
-        
+
+        // Try to fetch usage (internal API first, then PAT)
+        const usage = await usageService.fetchUsage(promptUser);
+
         if (usage) {
             statusBarManager.updateUsage(usage);
         } else {
-            statusBarManager.showError('Failed to fetch usage');
+            // If failed, check if we have a token
+            const hasToken = await tokenManager.hasToken();
+            if (!hasToken) {
+                statusBarManager.showNoToken();
+            } else {
+                statusBarManager.showError('Failed to fetch usage');
+            }
         }
     } catch (error) {
         console.error('Error refreshing usage:', error);
         statusBarManager.showError('Error fetching usage');
+    }
+}
+
+async function authenticateGitHub() {
+    const outputChannel = getOutputChannel();
+    outputChannel.show();
+    outputChannel.appendLine('Starting GitHub authentication...');
+
+    try {
+        statusBarManager.showLoading();
+        usageService.clearCache();
+
+        // Try to fetch with user prompt enabled
+        const usage = await usageService.fetchUsage(true);
+
+        if (usage) {
+            statusBarManager.updateUsage(usage);
+            vscode.window.showInformationMessage(
+                `GitHub authenticated! Usage: ${usage.used}/${usage.quota} (${usage.percentage}%)`
+            );
+        } else {
+            outputChannel.appendLine('Authentication or API call failed');
+            vscode.window.showErrorMessage(
+                'Failed to authenticate or fetch usage. Check the Output panel for details.'
+            );
+            statusBarManager.showNoToken();
+        }
+    } catch (error) {
+        outputChannel.appendLine(`Authentication error: ${error}`);
+        vscode.window.showErrorMessage('Authentication failed. Check the Output panel for details.');
+        statusBarManager.showError('Auth failed');
     }
 }
 
@@ -102,8 +152,9 @@ async function setToken() {
 
     if (token) {
         await tokenManager.setToken(token);
+        usageService.clearCache();
         vscode.window.showInformationMessage('GitHub token saved successfully!');
-        await refreshUsage();
+        await refreshUsage(false);
     }
 }
 
@@ -112,31 +163,30 @@ async function clearToken() {
         'Are you sure you want to clear your GitHub token?',
         'Yes', 'No'
     );
-    
+
     if (confirm === 'Yes') {
         await tokenManager.clearToken();
+        usageService.clearCache();
         vscode.window.showInformationMessage('GitHub token cleared.');
-        statusBarManager.showNoToken();
+        await refreshUsage(false);
     }
 }
 
 async function showDetails(context: vscode.ExtensionContext) {
-    const hasToken = await tokenManager.hasToken();
-    if (!hasToken) {
-        const action = await vscode.window.showWarningMessage(
-            'No GitHub token configured. Would you like to set one now?',
-            'Set Token', 'Cancel'
-        );
-        if (action === 'Set Token') {
-            await setToken();
-        }
-        return;
-    }
-
     try {
-        const usage = await usageService.fetchUsage();
+        const usage = await usageService.fetchUsage(false);
         if (usage) {
             DetailsPanel.createOrShow(context.extensionUri, usage);
+        } else {
+            const action = await vscode.window.showWarningMessage(
+                'No usage data available. Try authenticating with GitHub.',
+                'Authenticate', 'Set PAT Token', 'Cancel'
+            );
+            if (action === 'Authenticate') {
+                await authenticateGitHub();
+            } else if (action === 'Set PAT Token') {
+                await setToken();
+            }
         }
     } catch (error) {
         vscode.window.showErrorMessage('Failed to fetch usage details');
@@ -153,7 +203,7 @@ function setupAutoRefresh() {
     const intervalMs = Math.max(60, intervalSeconds) * 1000;
 
     refreshInterval = setInterval(() => {
-        refreshUsage();
+        refreshUsage(false);
     }, intervalMs);
 }
 

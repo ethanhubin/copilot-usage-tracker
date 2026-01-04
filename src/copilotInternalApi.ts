@@ -1,4 +1,7 @@
-import * as vscode from 'vscode';
+﻿import * as vscode from 'vscode';
+
+// Create output channel for logging
+const outputChannel = vscode.window.createOutputChannel('Copilot Usage Realtime');
 
 export interface CopilotUserInfo {
     copilot_plan: 'free' | 'individual' | 'individual_pro' | 'business' | 'enterprise';
@@ -9,8 +12,8 @@ export interface CopilotUserInfo {
             unlimited: boolean;
             overage_permitted: boolean;
             overage_count: number;
-            entitlement: number;      // 配额限制 (如 1500)
-            percent_remaining: number; // 剩余百分比 (如 94.9)
+            entitlement: number;
+            percent_remaining: number;
         };
     };
     quota_reset_date?: string;
@@ -35,22 +38,57 @@ const PLAN_MAP: Record<string, string> = {
     'enterprise': 'enterprise'
 };
 
+export function getOutputChannel(): vscode.OutputChannel {
+    return outputChannel;
+}
+
 export class CopilotInternalApi {
+    private log(message: string): void {
+        const timestamp = new Date().toISOString();
+        outputChannel.appendLine(`[${timestamp}] ${message}`);
+        console.log(`[CopilotInternalApi] ${message}`);
+    }
 
     /**
      * Try to get Copilot user info using the internal API
-     * This requires VS Code's GitHub authentication
+     * First try silent, then with user prompt if needed
      */
-    async fetchUserInfo(): Promise<CopilotUserInfo | null> {
+    async fetchUserInfo(promptUser: boolean = false): Promise<CopilotUserInfo | null> {
         try {
-            // Get GitHub session from VS Code's authentication
-            const session = await vscode.authentication.getSession('github', ['user:email', 'read:user'], { silent: true });
-
-            if (!session) {
-                console.log('[CopilotInternalApi] No GitHub session available');
-                return null;
+            this.log('Attempting to fetch user info...');
+            
+            // First try silent (no popup)
+            let session = await vscode.authentication.getSession(
+                'github', 
+                ['user:email', 'read:user'], 
+                { silent: true }
+            );
+            
+            this.log(`Silent session result: ${session ? 'found' : 'not found'}`);
+            
+            // If silent fails and we should prompt, try with createIfNone
+            if (!session && promptUser) {
+                this.log('Prompting user for GitHub authentication...');
+                try {
+                    session = await vscode.authentication.getSession(
+                        'github', 
+                        ['user:email', 'read:user'], 
+                        { createIfNone: true }
+                    );
+                    this.log(`Prompted session result: ${session ? 'found' : 'not found'}`);
+                } catch (e) {
+                    this.log(`User cancelled auth or error: ${e}`);
+                }
             }
 
+            if (!session) {
+                this.log('No GitHub session available');
+                return null;
+            }
+            
+            this.log(`Session account: ${session.account.label}`);
+
+            this.log('Calling copilot_internal/user API...');
             const response = await fetch('https://api.github.com/copilot_internal/user', {
                 headers: {
                     'Authorization': `Bearer ${session.accessToken}`,
@@ -60,16 +98,23 @@ export class CopilotInternalApi {
                 }
             });
 
+            this.log(`API response status: ${response.status} ${response.statusText}`);
+
             if (!response.ok) {
-                console.log(`[CopilotInternalApi] API returned ${response.status}: ${response.statusText}`);
+                const errorText = await response.text();
+                this.log(`API error response: ${errorText}`);
                 return null;
             }
 
             const data = await response.json() as CopilotUserInfo;
-            console.log('[CopilotInternalApi] User info fetched successfully');
+            this.log(`User info fetched: plan=${data.copilot_plan}`);
+            if (data.quota_snapshots?.premium_interactions) {
+                const pi = data.quota_snapshots.premium_interactions;
+                this.log(`Quota: entitlement=${pi.entitlement}, remaining=${pi.percent_remaining}%`);
+            }
             return data;
         } catch (error) {
-            console.error('[CopilotInternalApi] Failed to fetch user info:', error);
+            this.log(`Error fetching user info: ${error}`);
             return null;
         }
     }
@@ -79,6 +124,7 @@ export class CopilotInternalApi {
      */
     parseQuotaInfo(userInfo: CopilotUserInfo): CopilotQuotaInfo | null {
         if (!userInfo.quota_snapshots?.premium_interactions) {
+            this.log('No quota_snapshots.premium_interactions in response');
             return null;
         }
 
@@ -86,10 +132,7 @@ export class CopilotInternalApi {
         const entitlement = pi.entitlement;
         const percentRemaining = pi.percent_remaining;
 
-        // Calculate used: entitlement * (1 - percent_remaining / 100)
         const used = Math.max(0, entitlement * (1 - percentRemaining / 100));
-
-        // Calculate percentage used
         const percentage = entitlement > 0
             ? Math.round((used / entitlement) * 1000) / 10
             : 0;
@@ -113,10 +156,9 @@ export class CopilotInternalApi {
 
     /**
      * Try to get quota info using the internal API
-     * Returns null if the API is not accessible
      */
-    async getQuotaInfo(): Promise<CopilotQuotaInfo | null> {
-        const userInfo = await this.fetchUserInfo();
+    async getQuotaInfo(promptUser: boolean = false): Promise<CopilotQuotaInfo | null> {
+        const userInfo = await this.fetchUserInfo(promptUser);
         if (!userInfo) {
             return null;
         }
