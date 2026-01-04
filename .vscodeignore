@@ -1,0 +1,21 @@
+# Development-only folders
+.vscode/**
+.git/**
+node_modules/**
+
+# Source (compiled JS is in out/)
+src/**
+**/*.ts
+
+# Build/config artifacts not required at runtime
+tsconfig.json
+package-lock.json
+
+# Maps are optional; exclude to keep the VSIX small
+out/**/*.map
+
+# Don't package previous VSIX artifacts
+*.vsix
+
+# OS junk
+.DS_Store

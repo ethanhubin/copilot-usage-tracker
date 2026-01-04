@@ -1,15 +1,21 @@
 # Changelog
 
-All notable changes to "Copilot Usage Tracker" will be documented in this file.
+All notable changes to "Copilot Usage Realtime" will be documented in this file.
 
-## [0.0.1] - 2026-01-04
+## [0.0.7] - 2026-01-04
+
+### Changed
+- Improved README accuracy and added Simplified Chinese documentation
+- Added `.vscodeignore` to reduce VSIX contents
+
+## [0.0.6] - 2026-01-04
 
 ### Added
 - Initial release
 - Status bar displaying premium request usage (e.g., "🚀 60/300 (20%)")
+- Display modes: Normal, Progress Bar, Minimal
 - Secure GitHub PAT storage using VS Code SecretStorage
-- Detailed usage panel with breakdown by AI model
-- Color-coded status bar (green/yellow/red) based on usage thresholds
+- Details panel showing quota, remaining, reset date, and data source
+- Warning/error highlighting using VS Code theme colors
 - Configurable auto-refresh interval
-- Support for all Copilot plans (Free, Pro, Pro+, Business, Enterprise)
-- Commands: Refresh, Set Token, Show Details, Clear Token
+- Commands: Refresh, Authenticate with GitHub, Set Token, Clear Token, Show Details, Show Logs
