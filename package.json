@@ -1,0 +1,110 @@
+{
+  "name": "copilot-usage-tracker",
+  "displayName": "Copilot Usage Tracker",
+  "description": "Track and display GitHub Copilot premium request usage in real-time",
+  "version": "0.0.1",
+  "publisher": "ethanhubin",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ethanhubin/copilot-usage-tracker"
+  },
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "keywords": [
+    "copilot",
+    "github",
+    "usage",
+    "premium",
+    "tracker"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./out/extension.js",
+  "icon": "resources/icon.png",
+  "contributes": {
+    "commands": [
+      {
+        "command": "copilot-usage-tracker.refresh",
+        "title": "Copilot Usage: Refresh",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "copilot-usage-tracker.setToken",
+        "title": "Copilot Usage: Set GitHub Token"
+      },
+      {
+        "command": "copilot-usage-tracker.showDetails",
+        "title": "Copilot Usage: Show Details"
+      },
+      {
+        "command": "copilot-usage-tracker.clearToken",
+        "title": "Copilot Usage: Clear Token"
+      }
+    ],
+    "configuration": {
+      "title": "Copilot Usage Tracker",
+      "properties": {
+        "copilotUsageTracker.plan": {
+          "type": "string",
+          "default": "pro",
+          "enum": [
+            "free",
+            "pro",
+            "pro_plus",
+            "business",
+            "enterprise"
+          ],
+          "enumDescriptions": [
+            "Copilot Free (50 requests/month)",
+            "Copilot Pro (300 requests/month)",
+            "Copilot Pro+ (1500 requests/month)",
+            "Copilot Business (300 requests/user/month)",
+            "Copilot Enterprise (1000 requests/user/month)"
+          ],
+          "description": "Your GitHub Copilot subscription plan"
+        },
+        "copilotUsageTracker.refreshInterval": {
+          "type": "number",
+          "default": 300,
+          "minimum": 60,
+          "description": "Auto-refresh interval in seconds (minimum 60)"
+        },
+        "copilotUsageTracker.showPercentage": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show usage percentage in status bar"
+        },
+        "copilotUsageTracker.warningThreshold": {
+          "type": "number",
+          "default": 80,
+          "minimum": 0,
+          "maximum": 100,
+          "description": "Show warning color when usage exceeds this percentage"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "pretest": "npm run compile && npm run lint",
+    "lint": "eslint src --ext ts",
+    "test": "node ./out/test/runTest.js",
+    "package": "vsce package"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "@types/vscode": "^1.85.0",
+    "@typescript-eslint/eslint-plugin": "^6.13.0",
+    "@typescript-eslint/parser": "^6.13.0",
+    "eslint": "^8.54.0",
+    "typescript": "^5.3.0",
+    "@vscode/vsce": "^2.22.0"
+  }
+}
